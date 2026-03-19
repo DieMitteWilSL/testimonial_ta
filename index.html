@@ -8,83 +8,406 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Banner-Generator</title>
+  <title>Die Mitte Wil – Banner-Generator</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fafafa; }
-    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
-    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; background:#fff; }
-    canvas { width: 100%; height: auto; border-radius: 12px; border: 1px solid #eee; touch-action: none; background:#fff; }
-    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    :root {
+      --brand-orange: #ff9b00;
+      --brand-orange-dark: #e48700;
+      --brand-blue: #0b4a84;
+      --brand-anthracite: #2f3136;
+      --brand-text: #1f2937;
+      --brand-muted: #6b7280;
+      --brand-bg: #f7f7f5;
+      --card-bg: #ffffff;
+      --card-border: #ece7df;
+      --shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
+      --radius: 18px;
+    }
 
-    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 32px 20px;
+      background: linear-gradient(180deg, #fff8ef 0%, var(--brand-bg) 180px);
+      color: var(--brand-text);
+    }
+
+    .wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, var(--brand-orange) 0%, #ffb943 100%);
+      color: #fff;
+      border-radius: 24px;
+      padding: 24px 24px 20px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px 0;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 760px;
+      font-size: 16px;
+      line-height: 1.55;
+      color: rgba(255,255,255,0.95);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px;
+      background: var(--card-bg);
+      box-shadow: var(--shadow);
+    }
+
+    .card h2 {
+      margin: 0 0 14px 0;
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--brand-anthracite);
+    }
+
+    .intro {
+      font-size: 14px;
+      line-height: 1.55;
+      color: var(--brand-muted);
+      margin-bottom: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--brand-anthracite);
+    }
+
+    input[type="file"] {
+      width: 100%;
+      border: 1px dashed #d8d1c6;
+      background: #fcfbf9;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 14px;
+      color: var(--brand-text);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--brand-orange);
+      cursor: pointer;
+    }
+
+    .person-select {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .person-btn {
+      appearance: none;
+      width: 100%;
+      border: 1px solid #d9dfe6;
+      background: #f3f4f6;
+      color: var(--brand-anthracite);
+      border-radius: 18px;
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
+      display: grid;
+      grid-template-columns: 84px 1fr;
+      align-items: center;
+      gap: 16px;
+      text-align: left;
+      box-shadow: 0 6px 18px rgba(31, 41, 55, 0.05);
+    }
+
+    .person-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 24px rgba(31, 41, 55, 0.10);
+      background: #eef2f7;
+    }
+
+    .person-btn.active {
+      border-color: var(--brand-orange);
+      background: #fff7eb;
+      box-shadow: 0 12px 28px rgba(255, 155, 0, 0.18);
+    }
+
+    .person-avatar {
+      width: 84px;
+      height: 84px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: #f59e0b;
+      flex: 0 0 auto;
+      border: 4px solid #ffffff;
+      box-shadow: 0 6px 16px rgba(31, 41, 55, 0.10);
+    }
+
+    .person-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .person-text {
+      display: grid;
+      gap: 4px;
+    }
+
+    .person-name {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.15;
+      color: var(--brand-blue);
+    }
+
+    .person-subtitle {
+      font-size: 14px;
+      line-height: 1.3;
+      color: #1f2937;
+      font-weight: 600;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid #d7d2c9;
+      background: #fff;
+      color: var(--brand-anthracite);
+      border-radius: 12px;
+      padding: 11px 15px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+
+    button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(31, 41, 55, 0.08);
+      background: #fffdf9;
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    
+    .mitte-word {
+  color: var(--brand-blue);
+}
+
+    #reset {
+      min-width: 130px;
+    }
 
     #download {
-      padding: 14px 22px;
-      border-radius: 12px;
+      padding: 15px 24px;
+      border-radius: 14px;
       border: none;
-      background: #FF9B00;
+      background: linear-gradient(135deg, var(--brand-orange) 0%, var(--brand-orange-dark) 100%);
       color: #fff;
-      font-weight: 700;
+      font-weight: 800;
       font-size: 16px;
-      letter-spacing: .2px;
-      box-shadow: 0 6px 14px rgba(0,0,0,0.18);
-      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+      letter-spacing: .01em;
+      box-shadow: 0 10px 22px rgba(255, 155, 0, 0.28);
     }
-    #download:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 10px 18px rgba(0,0,0,0.22);
+
+    #download:hover:not(:disabled) {
       filter: brightness(1.02);
+      transform: translateY(-1px);
+      box-shadow: 0 14px 26px rgba(255, 155, 0, 0.34);
     }
-    #download:active {
-      transform: translateY(0px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.18);
-    }
+
     #download:disabled {
       background: #9ca3af;
       box-shadow: none;
       filter: none;
-      cursor: not-allowed;
     }
 
-    label { display: flex; gap: 10px; align-items: center; }
-    input[type="range"] { width: 220px; }
-    small { color: #555; display: block; margin-top: 8px; line-height: 1.4; }
-    .status { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background:#f3f4f6; border:1px solid #e5e7eb; font-size: 14px; }
-    .status.ok { background:#ecfdf5; border-color:#a7f3d0; }
-    .status.err { background:#fef2f2; border-color:#fecaca; }
-    code { background:#f3f4f6; padding:2px 6px; border-radius:6px; }
+    .tips {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--brand-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .tips li + li {
+      margin-top: 6px;
+    }
+
+    .canvas-card {
+      padding: 16px;
+    }
+
+    .canvas-frame {
+      background: linear-gradient(180deg, #fff 0%, #faf8f3 100%);
+      border: 1px solid #eee6d9;
+      border-radius: 20px;
+      padding: 14px;
+    }
+
+    canvas {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 14px;
+      border: 1px solid #eee4d3;
+      touch-action: none;
+      background: #fff;
+    }
+
+    .download-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    .status {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      line-height: 1.45;
+      border: 1px solid #fecaca;
+      background: #fff1f2;
+      color: #991b1b;
+    }
+
+    .footer-note {
+      text-align: center;
+      font-size: 13px;
+      color: var(--brand-muted);
+      margin-top: 4px;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 20px 14px;
+      }
+
+      .hero, .card {
+        border-radius: 18px;
+      }
+
+      .person-btn {
+        grid-template-columns: 72px 1fr;
+        padding: 14px;
+        gap: 14px;
+      }
+
+      .person-avatar {
+        width: 72px;
+        height: 72px;
+      }
+
+      .person-name {
+        font-size: 15px;
+      }
+
+      .person-subtitle {
+        font-size: 13px;
+      }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="card">
-      <h2 style="margin:0 0 8px 0;">Banner erstellen</h2>
+    <section class="hero">
+      <h1><span class="mitte-word">Mitte</span>nand Unterstützung sichtbar machen</h1>
+      <p>
+        Wählen Sie Ihre Kandidatur, laden Sie Ihr Foto hoch und teilen Sie Ihr persönliches Banner.
+      </p>
+    </section>
 
-      <div class="row">
-        <input id="photo" type="file" accept="image/*" />
+    <div class="grid">
+      <div class="card">
+        <h2>Bild vorbereiten</h2>
+        <div class="intro">
+          Wählen Sie zuerst die Person aus. Danach können Sie ein Foto hochladen, den Ausschnitt mit Maus oder Finger verschieben und mit dem Regler vergrössern oder verkleinern.
+        </div>
 
-        <label>
-          Zoom
+        <div class="field">
+          <label>Kandidatur auswählen</label>
+          <div class="person-select" id="personSelect"></div>
+        </div>
+
+        <div class="field">
+          <label for="photo">Foto hochladen</label>
+          <input id="photo" type="file" accept="image/*" />
+        </div>
+
+        <div class="field">
+          <label for="zoom">Zoom</label>
           <input id="zoom" type="range" min="1" max="3" step="0.01" value="1" disabled />
-        </label>
+        </div>
 
-        <button id="reset" disabled>Zurücksetzen</button>
+        <div class="button-row">
+          <button id="reset" disabled>Zurücksetzen</button>
+        </div>
+
+        <ul class="tips">
+          <li>Zuerst die gewünschte Person auswählen.</li>
+          <li>Das Foto kann im Kreis frei positioniert werden.</li>
+          <li>Der Zoom hilft, den gewünschten Ausschnitt optimal zu setzen.</li>
+          <li>Am Schluss kann das Banner direkt als PNG gespeichert werden.</li>
+        </ul>
+
+        <div id="status" class="status"></div>
       </div>
 
-      <small>
-        Foto hochladen → dann im Kreis mit Maus/Finger verschieben und mit dem Zoom-Regler anpassen.<br>
-        Danach das fertige PNG mit dem Button unten herunterladen.
-      </small>
+      <div class="card canvas-card">
+        <div class="canvas-frame">
+          <canvas id="c"></canvas>
+        </div>
 
-      <div id="status" class="status">Banner wird geladen…</div>
-    </div>
+        <div class="download-wrap">
+          <button id="download" disabled>⬇ Banner als PNG herunterladen</button>
+        </div>
 
-    <div class="card">
-      <canvas id="c"></canvas>
-
-      <div class="row" style="margin-top:20px; justify-content:center;">
-        <button id="download" disabled>⬇ Banner als PNG herunterladen</button>
+        <div class="footer-note">
+          Vielen Dank für die Unterstützung!
+        </div>
       </div>
     </div>
   </div>
@@ -93,15 +416,27 @@
     // =========================
     // KONFIGURATION
     // =========================
+    const PEOPLE = {
+      andreas: {
+        name: "Andreas Breitenmoser",
+        subtitle: "Ins Stadtpräsidium",
+        banner: "https://raw.githubusercontent.com/DEIN-REPO/DEIN-PFAD/main/banner_andreas.png",
+        portrait: "https://wil.sg.die-mitte.ch/wp-content/uploads/sites/169/2025/04/AndiBreitenmoser-300x240.jpg"
+      },
+      thomas: {
+        name: "Thomas Abbt",
+        subtitle: "Für Wil in den Stadtrat",
+        banner: "https://raw.githubusercontent.com/DieMitteWilSL/testimonial_ta/refs/heads/main/banner.png",
+        portrait: "https://wil.sg.die-mitte.ch/wp-content/uploads/sites/169/2025/04/ThomasAbbt_001-300x240.jpg"
+      }
+    };
 
-    // WICHTIG:
-    // Verwende eine HTTP/HTTPS URL, NICHT file:///...
-    const BG_SRC = "https://raw.githubusercontent.com/DieMitteWilSL/testimonial_ta/refs/heads/main/banner.png";
+    const DEFAULT_PERSON = "thomas";
 
     const FALLBACK_SIZE = { w: 2048, h: 1365 };
     const REF_SIZE = { w: 2048, h: 1365 };
-
     const CIRCLE_REF = { cx: 1569, cy: 674, r: 312 };
+    const BORDER = { enabled: true, width: 8, color: "#ffffff" };
 
     function getCircle() {
       const sx = canvas.width / REF_SIZE.w;
@@ -110,14 +445,12 @@
       return {
         cx: CIRCLE_REF.cx * sx,
         cy: CIRCLE_REF.cy * sy,
-        r:  CIRCLE_REF.r  * s,
+        r: CIRCLE_REF.r * s,
       };
     }
 
-    const BORDER = { enabled: true, width: 8, color: "#ffffff" };
-
     // =========================
-    // STATUS / DOM
+    // DOM / STATUS
     // =========================
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
@@ -127,6 +460,7 @@
     const btnDownload = document.getElementById("download");
     const btnReset = document.getElementById("reset");
     const statusEl = document.getElementById("status");
+    const personSelectEl = document.getElementById("personSelect");
 
     canvas.width = FALLBACK_SIZE.w;
     canvas.height = FALLBACK_SIZE.h;
@@ -134,6 +468,7 @@
     const bgImg = new Image();
     bgImg.crossOrigin = "anonymous";
 
+    let selectedPerson = DEFAULT_PERSON;
     let bgLoaded = false;
     let userImg = null;
 
@@ -147,25 +482,73 @@
     let lastY = 0;
 
     // =========================
+    // PERSONEN-AUSWAHL
+    // =========================
+    function renderPersonButtons() {
+      personSelectEl.innerHTML = "";
+
+      Object.entries(PEOPLE).forEach(([key, person]) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "person-btn" + (key === selectedPerson ? " active" : "");
+        btn.dataset.person = key;
+
+        btn.innerHTML = `
+          <span class="person-avatar">
+            <img src="${person.portrait}" alt="${person.name}">
+          </span>
+          <span class="person-text">
+            <span class="person-name">${person.name}</span>
+            <span class="person-subtitle">${person.subtitle || ""}</span>
+          </span>
+        `;
+
+        btn.addEventListener("click", () => {
+          if (selectedPerson === key) return;
+          selectedPerson = key;
+          renderPersonButtons();
+          loadBannerForSelectedPerson();
+        });
+
+        personSelectEl.appendChild(btn);
+      });
+    }
+
+    function loadBannerForSelectedPerson() {
+      hideStatus();
+      bgLoaded = false;
+
+      const person = PEOPLE[selectedPerson];
+      if (!person || !person.banner) {
+        setStatus("Für die ausgewählte Person ist noch kein Banner hinterlegt.");
+        render();
+        return;
+      }
+
+      bgImg.src = person.banner;
+    }
+
+    // =========================
     // BANNER LADEN
     // =========================
-    setStatus(`Banner-Pfad: <code>${escapeHtml(BG_SRC)}</code>`, true);
-
     bgImg.onload = () => {
       bgLoaded = true;
-      canvas.width = bgImg.naturalWidth;
-      canvas.height = bgImg.naturalHeight;
-      setStatus(`Banner geladen (${bgImg.naturalWidth}×${bgImg.naturalHeight}).`, true);
+      canvas.width = bgImg.naturalWidth || FALLBACK_SIZE.w;
+      canvas.height = bgImg.naturalHeight || FALLBACK_SIZE.h;
+
+      if (userImg) {
+        clampOffsets();
+      }
+
+      hideStatus();
       render();
     };
 
     bgImg.onerror = () => {
       bgLoaded = false;
-      setStatus(`Banner konnte nicht geladen werden.`, "error");
+      setStatus("Das Banner konnte nicht geladen werden. Bitte prüfen Sie den Bildpfad oder die Bilddatei.");
       render();
     };
-
-    bgImg.src = BG_SRC;
 
     // =========================
     // BILD UPLOAD
@@ -174,15 +557,19 @@
       const file = input.files && input.files[0];
       if (!file) return;
 
-      userImg = await loadImageFromFile(file);
+      try {
+        userImg = await loadImageFromFile(file);
+        setupInitialTransform();
 
-      setupInitialTransform();
+        zoomEl.disabled = false;
+        btnDownload.disabled = false;
+        btnReset.disabled = false;
 
-      zoomEl.disabled = false;
-      btnDownload.disabled = false;
-      btnReset.disabled = false;
-
-      render();
+        hideStatus();
+        render();
+      } catch (err) {
+        setStatus("Das gewählte Foto konnte nicht geladen werden.");
+      }
     });
 
     function setupInitialTransform() {
@@ -203,6 +590,9 @@
       clampOffsets();
     }
 
+    // =========================
+    // ZOOM
+    // =========================
     zoomEl.addEventListener("input", () => {
       if (!userImg) return;
 
@@ -217,6 +607,9 @@
       render();
     });
 
+    // =========================
+    // DRAG
+    // =========================
     canvas.addEventListener("pointerdown", (e) => {
       if (!userImg) return;
 
@@ -259,9 +652,12 @@
       const C = getCircle();
       const dx = x - C.cx;
       const dy = y - C.cy;
-      return (dx*dx + dy*dy) <= (C.r * C.r);
+      return (dx * dx + dy * dy) <= (C.r * C.r);
     }
 
+    // =========================
+    // BUTTONS
+    // =========================
     btnReset.addEventListener("click", () => {
       if (!userImg) return;
       setupInitialTransform();
@@ -269,17 +665,36 @@
     });
 
     btnDownload.addEventListener("click", () => {
+      if (!bgLoaded) {
+        setStatus("Das Banner ist noch nicht geladen.");
+        return;
+      }
+
+      const person = PEOPLE[selectedPerson];
+      const safeName = person.name
+        .toLowerCase()
+        .replaceAll(" ", "_")
+        .replaceAll("ä", "ae")
+        .replaceAll("ö", "oe")
+        .replaceAll("ü", "ue");
+
       const a = document.createElement("a");
-      a.download = "Banner.png";
+      a.download = `DieMitteWil_Banner_${safeName}.png`;
       a.href = canvas.toDataURL("image/png");
       a.click();
     });
 
+    // =========================
+    // RENDER
+    // =========================
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (bgLoaded) {
-        ctx.drawImage(bgImg, 0, 0);
+        ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
 
       if (userImg) {
@@ -298,12 +713,11 @@
       ctx.clip();
 
       const scale = baseScale * zoom;
-
       const w = img.naturalWidth * scale;
       const h = img.naturalHeight * scale;
 
-      const x = (C.cx - w/2) + offsetX;
-      const y = (C.cy - h/2) + offsetY;
+      const x = (C.cx - w / 2) + offsetX;
+      const y = (C.cy - h / 2) + offsetY;
 
       ctx.drawImage(img, x, y, w, h);
       ctx.restore();
@@ -313,13 +727,16 @@
       const C = getCircle();
       ctx.save();
       ctx.beginPath();
-      ctx.arc(C.cx, C.cy, C.r + BORDER.width/2, 0, Math.PI * 2);
+      ctx.arc(C.cx, C.cy, C.r + BORDER.width / 2, 0, Math.PI * 2);
       ctx.lineWidth = BORDER.width;
       ctx.strokeStyle = BORDER.color;
       ctx.stroke();
       ctx.restore();
     }
 
+    // =========================
+    // CLAMPING
+    // =========================
     function clampOffsets() {
       if (!userImg) return;
 
@@ -341,12 +758,21 @@
       return Math.min(max, Math.max(min, v));
     }
 
+    // =========================
+    // HELFER
+    // =========================
     function loadImageFromFile(file) {
       return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
         const img = new Image();
-        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-        img.onerror = reject;
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(img);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Bild konnte nicht geladen werden"));
+        };
         img.src = url;
       });
     }
@@ -359,18 +785,21 @@
       };
     }
 
-    function setStatus(html, state) {
-      statusEl.classList.remove("ok", "err");
-      if (state === true) statusEl.classList.add("ok");
-      if (state === "error") statusEl.classList.add("err");
-      statusEl.innerHTML = html;
+    function setStatus(message) {
+      statusEl.style.display = "block";
+      statusEl.textContent = message;
     }
 
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, (c) => ({
-        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
-      }[c]));
+    function hideStatus() {
+      statusEl.style.display = "none";
+      statusEl.textContent = "";
     }
+
+    // =========================
+    // INIT
+    // =========================
+    renderPersonButtons();
+    loadBannerForSelectedPerson();
   </script>
 </body>
 </html>
