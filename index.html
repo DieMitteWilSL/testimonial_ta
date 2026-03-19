@@ -3,12 +3,12 @@
  /\_/\  
 ( o.o ) 
  > ^ <
- MEOW MEOW -->
-<html lang="en">
+ MIAU MIAU -->
+<html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Banner Generator</title>
+  <title>Banner-Generator</title>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fafafa; }
     .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
@@ -16,16 +16,14 @@
     canvas { width: 100%; height: auto; border-radius: 12px; border: 1px solid #eee; touch-action: none; background:#fff; }
     .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 
-    /* Base button */
     button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
     button:disabled { opacity: .5; cursor: not-allowed; }
 
-    /* Make the main CTA (Download) more prominent */
     #download {
       padding: 14px 22px;
       border-radius: 12px;
       border: none;
-      background: #2f2f8f; /* ECU blue */
+      background: #2f2f8f;
       color: #fff;
       font-weight: 700;
       font-size: 16px;
@@ -61,7 +59,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h2 style="margin:0 0 8px 0;">Create Banner</h2>
+      <h2 style="margin:0 0 8px 0;">Banner erstellen</h2>
 
       <div class="row">
         <input id="photo" type="file" accept="image/*" />
@@ -71,47 +69,40 @@
           <input id="zoom" type="range" min="1" max="3" step="0.01" value="1" disabled />
         </label>
 
-        <button id="reset" disabled>Reset</button>
+        <button id="reset" disabled>Zurücksetzen</button>
       </div>
 
       <small>
-        Upload a photo → then drag it inside the circle using your mouse/finger and adjust it with the zoom slider.<br>
-        Afterwards, download the finished PNG using the button below.
+        Foto hochladen → dann im Kreis mit Maus/Finger verschieben und mit dem Zoom-Regler anpassen.<br>
+        Danach das fertige PNG mit dem Button unten herunterladen.
       </small>
 
-      <div id="status" class="status">Loading banner…</div>
+      <div id="status" class="status">Banner wird geladen…</div>
     </div>
 
     <div class="card">
       <canvas id="c"></canvas>
 
-      <!-- Center the CTA to make it more prominent -->
       <div class="row" style="margin-top:20px; justify-content:center;">
-        <button id="download" disabled>⬇ Download banner as PNG</button>
+        <button id="download" disabled>⬇ Banner als PNG herunterladen</button>
       </div>
     </div>
   </div>
 
   <script>
     // =========================
-    // CONFIGURATION
+    // KONFIGURATION
     // =========================
 
-    // IMPORTANT:
-    // Use an HTTP/HTTPS URL here, NOT file:///...
-    // If index.html and banner.png are in the same folder, you can use:
+    // WICHTIG:
+    // Verwende eine HTTP/HTTPS URL, NICHT file:///...
     const BG_SRC = "https://raw.githubusercontent.com/DieMitteWilSL/testimonial_ta/refs/heads/main/banner.png";
 
-    // Fallback size (your banner is 2048×1365)
     const FALLBACK_SIZE = { w: 2048, h: 1365 };
-
-    // Reference size (the banner file used to measure the circle)
     const REF_SIZE = { w: 2048, h: 1365 };
 
-    // Circle position in reference coordinates
     const CIRCLE_REF = { cx: 1569, cy: 674, r: 312 };
 
-    // Calculate circle based on current canvas/banner size
     function getCircle() {
       const sx = canvas.width / REF_SIZE.w;
       const sy = canvas.height / REF_SIZE.h;
@@ -123,11 +114,10 @@
       };
     }
 
-    // Optional white border
     const BORDER = { enabled: true, width: 8, color: "#ffffff" };
 
     // =========================
-    // STATE / DOM
+    // STATUS / DOM
     // =========================
     const canvas = document.getElementById("c");
     const ctx = canvas.getContext("2d");
@@ -147,45 +137,38 @@
     let bgLoaded = false;
     let userImg = null;
 
-    // Transform for user image
     let baseScale = 1;
     let zoom = 1;
     let offsetX = 0;
     let offsetY = 0;
 
-    // Dragging
     let dragging = false;
     let lastX = 0;
     let lastY = 0;
 
     // =========================
-    // LOAD BANNER
+    // BANNER LADEN
     // =========================
-    setStatus(`Banner path: <code>${escapeHtml(BG_SRC)}</code><br>If you see <code>file:///</code>, please open the page via the WordPress URL.`, false);
+    setStatus(`Banner-Pfad: <code>${escapeHtml(BG_SRC)}</code>`, false);
 
     bgImg.onload = () => {
       bgLoaded = true;
       canvas.width = bgImg.naturalWidth;
       canvas.height = bgImg.naturalHeight;
-      setStatus(`Banner loaded (${bgImg.naturalWidth}×${bgImg.naturalHeight}).`, true);
+      setStatus(`Banner geladen (${bgImg.naturalWidth}×${bgImg.naturalHeight}).`, true);
       render();
     };
 
     bgImg.onerror = () => {
       bgLoaded = false;
-      setStatus(
-        `Banner could not be loaded.<br>
-         Check if <code>banner.png</code> is in the same folder as <code>index.html</code> and open the page via HTTP (Local WP URL).<br>
-         Test in browser: <code>.../banner-tool/banner.png</code>`,
-        "error"
-      );
+      setStatus(`Banner konnte nicht geladen werden.`, "error");
       render();
     };
 
     bgImg.src = BG_SRC;
 
     // =========================
-    // UPLOAD USER IMAGE
+    // BILD UPLOAD
     // =========================
     input.addEventListener("change", async () => {
       const file = input.files && input.files[0];
@@ -211,7 +194,6 @@
       const iw = userImg.naturalWidth;
       const ih = userImg.naturalHeight;
 
-      // Overscan so users can drag even at zoom=1 (prevents "maxX/maxY == 0" lock)
       const OVERSCAN = 1.05;
       baseScale = Math.max(d / iw, d / ih) * OVERSCAN;
 
@@ -221,9 +203,6 @@
       clampOffsets();
     }
 
-    // =========================
-    // ZOOM
-    // =========================
     zoomEl.addEventListener("input", () => {
       if (!userImg) return;
 
@@ -238,9 +217,6 @@
       render();
     });
 
-    // =========================
-    // DRAG (Pointer Events)
-    // =========================
     canvas.addEventListener("pointerdown", (e) => {
       if (!userImg) return;
 
@@ -286,9 +262,6 @@
       return (dx*dx + dy*dy) <= (C.r * C.r);
     }
 
-    // =========================
-    // RESET + DOWNLOAD
-    // =========================
     btnReset.addEventListener("click", () => {
       if (!userImg) return;
       setupInitialTransform();
@@ -297,29 +270,16 @@
 
     btnDownload.addEventListener("click", () => {
       const a = document.createElement("a");
-      a.download = "ECU2026_Banner.png";
+      a.download = "Banner.png";
       a.href = canvas.toDataURL("image/png");
       a.click();
     });
 
-    // =========================
-    // RENDER
-    // =========================
     function render() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (bgLoaded) {
         ctx.drawImage(bgImg, 0, 0);
-      } else {
-        ctx.save();
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#111827";
-        ctx.font = "28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-        ctx.fillText("Banner not loaded", 40, 70);
-        ctx.font = "18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-        ctx.fillText("Please check the path/URL (not file:///).", 40, 105);
-        ctx.restore();
       }
 
       if (userImg) {
@@ -339,10 +299,8 @@
 
       const scale = baseScale * zoom;
 
-      const iw = img.naturalWidth;
-      const ih = img.naturalHeight;
-      const w = iw * scale;
-      const h = ih * scale;
+      const w = img.naturalWidth * scale;
+      const h = img.naturalHeight * scale;
 
       const x = (C.cx - w/2) + offsetX;
       const y = (C.cy - h/2) + offsetY;
@@ -362,15 +320,11 @@
       ctx.restore();
     }
 
-    // =========================
-    // CLAMPING: prevents empty edges inside the circle
-    // =========================
     function clampOffsets() {
       if (!userImg) return;
 
       const C = getCircle();
-      const r = C.r;
-      const d = r * 2;
+      const d = C.r * 2;
 
       const scale = baseScale * zoom;
       const w = userImg.naturalWidth * scale;
@@ -387,9 +341,6 @@
       return Math.min(max, Math.max(min, v));
     }
 
-    // =========================
-    // HELPERS
-    // =========================
     function loadImageFromFile(file) {
       return new Promise((resolve, reject) => {
         const url = URL.createObjectURL(file);
@@ -402,11 +353,9 @@
 
     function getCanvasPoint(e) {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
       return {
-        x: (e.clientX - rect.left) * scaleX,
-        y: (e.clientY - rect.top) * scaleY
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
       };
     }
 
