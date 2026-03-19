@@ -1,0 +1,427 @@
+<!doctype html>
+<!-- 
+ /\_/\  
+( o.o ) 
+ > ^ <
+ MEOW MEOW -->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Banner Generator</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fafafa; }
+    .wrap { max-width: 980px; margin: 0 auto; display: grid; gap: 16px; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; background:#fff; }
+    canvas { width: 100%; height: auto; border-radius: 12px; border: 1px solid #eee; touch-action: none; background:#fff; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+    /* Base button */
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; background: #fff; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Make the main CTA (Download) more prominent */
+    #download {
+      padding: 14px 22px;
+      border-radius: 12px;
+      border: none;
+      background: #2f2f8f; /* ECU blue */
+      color: #fff;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: .2px;
+      box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+      transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    }
+    #download:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(0,0,0,0.22);
+      filter: brightness(1.02);
+    }
+    #download:active {
+      transform: translateY(0px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+    }
+    #download:disabled {
+      background: #9ca3af;
+      box-shadow: none;
+      filter: none;
+      cursor: not-allowed;
+    }
+
+    label { display: flex; gap: 10px; align-items: center; }
+    input[type="range"] { width: 220px; }
+    small { color: #555; display: block; margin-top: 8px; line-height: 1.4; }
+    .status { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background:#f3f4f6; border:1px solid #e5e7eb; font-size: 14px; }
+    .status.ok { background:#ecfdf5; border-color:#a7f3d0; }
+    .status.err { background:#fef2f2; border-color:#fecaca; }
+    code { background:#f3f4f6; padding:2px 6px; border-radius:6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2 style="margin:0 0 8px 0;">Create Banner</h2>
+
+      <div class="row">
+        <input id="photo" type="file" accept="image/*" />
+
+        <label>
+          Zoom
+          <input id="zoom" type="range" min="1" max="3" step="0.01" value="1" disabled />
+        </label>
+
+        <button id="reset" disabled>Reset</button>
+      </div>
+
+      <small>
+        Upload a photo → then drag it inside the circle using your mouse/finger and adjust it with the zoom slider.<br>
+        Afterwards, download the finished PNG using the button below.
+      </small>
+
+      <div id="status" class="status">Loading banner…</div>
+    </div>
+
+    <div class="card">
+      <canvas id="c"></canvas>
+
+      <!-- Center the CTA to make it more prominent -->
+      <div class="row" style="margin-top:20px; justify-content:center;">
+        <button id="download" disabled>⬇ Download banner as PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================
+    // CONFIGURATION
+    // =========================
+
+    // IMPORTANT:
+    // Use an HTTP/HTTPS URL here, NOT file:///...
+    // If index.html and banner.png are in the same folder, you can use:
+    const BG_SRC = "https://ecu2026.com/wp-content/uploads/banner-generator/banner.png";
+
+    // Fallback size (your banner is 2048×1365)
+    const FALLBACK_SIZE = { w: 2048, h: 1365 };
+
+    // Reference size (the banner file used to measure the circle)
+    const REF_SIZE = { w: 2048, h: 1365 };
+
+    // Circle position in reference coordinates
+    const CIRCLE_REF = { cx: 1569, cy: 674, r: 312 };
+
+    // Calculate circle based on current canvas/banner size
+    function getCircle() {
+      const sx = canvas.width / REF_SIZE.w;
+      const sy = canvas.height / REF_SIZE.h;
+      const s = (sx + sy) / 2;
+      return {
+        cx: CIRCLE_REF.cx * sx,
+        cy: CIRCLE_REF.cy * sy,
+        r:  CIRCLE_REF.r  * s,
+      };
+    }
+
+    // Optional white border
+    const BORDER = { enabled: true, width: 8, color: "#ffffff" };
+
+    // =========================
+    // STATE / DOM
+    // =========================
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+
+    const input = document.getElementById("photo");
+    const zoomEl = document.getElementById("zoom");
+    const btnDownload = document.getElementById("download");
+    const btnReset = document.getElementById("reset");
+    const statusEl = document.getElementById("status");
+
+    canvas.width = FALLBACK_SIZE.w;
+    canvas.height = FALLBACK_SIZE.h;
+
+    const bgImg = new Image();
+    bgImg.crossOrigin = "anonymous";
+
+    let bgLoaded = false;
+    let userImg = null;
+
+    // Transform for user image
+    let baseScale = 1;
+    let zoom = 1;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    // Dragging
+    let dragging = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    // =========================
+    // LOAD BANNER
+    // =========================
+    setStatus(`Banner path: <code>${escapeHtml(BG_SRC)}</code><br>If you see <code>file:///</code>, please open the page via the WordPress URL.`, false);
+
+    bgImg.onload = () => {
+      bgLoaded = true;
+      canvas.width = bgImg.naturalWidth;
+      canvas.height = bgImg.naturalHeight;
+      setStatus(`Banner loaded (${bgImg.naturalWidth}×${bgImg.naturalHeight}).`, true);
+      render();
+    };
+
+    bgImg.onerror = () => {
+      bgLoaded = false;
+      setStatus(
+        `Banner could not be loaded.<br>
+         Check if <code>banner.png</code> is in the same folder as <code>index.html</code> and open the page via HTTP (Local WP URL).<br>
+         Test in browser: <code>.../banner-tool/banner.png</code>`,
+        "error"
+      );
+      render();
+    };
+
+    bgImg.src = BG_SRC;
+
+    // =========================
+    // UPLOAD USER IMAGE
+    // =========================
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+
+      userImg = await loadImageFromFile(file);
+
+      setupInitialTransform();
+
+      zoomEl.disabled = false;
+      btnDownload.disabled = false;
+      btnReset.disabled = false;
+
+      render();
+    });
+
+    function setupInitialTransform() {
+      zoom = 1;
+      zoomEl.value = "1";
+
+      const C = getCircle();
+      const d = C.r * 2;
+      const iw = userImg.naturalWidth;
+      const ih = userImg.naturalHeight;
+
+      // Overscan so users can drag even at zoom=1 (prevents "maxX/maxY == 0" lock)
+      const OVERSCAN = 1.05;
+      baseScale = Math.max(d / iw, d / ih) * OVERSCAN;
+
+      offsetX = 0;
+      offsetY = 0;
+
+      clampOffsets();
+    }
+
+    // =========================
+    // ZOOM
+    // =========================
+    zoomEl.addEventListener("input", () => {
+      if (!userImg) return;
+
+      const prevZoom = zoom;
+      zoom = parseFloat(zoomEl.value);
+
+      const factor = zoom / prevZoom;
+      offsetX *= factor;
+      offsetY *= factor;
+
+      clampOffsets();
+      render();
+    });
+
+    // =========================
+    // DRAG (Pointer Events)
+    // =========================
+    canvas.addEventListener("pointerdown", (e) => {
+      if (!userImg) return;
+
+      const p = getCanvasPoint(e);
+      if (!isInsideCircle(p.x, p.y)) return;
+
+      dragging = true;
+      lastX = p.x;
+      lastY = p.y;
+      canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!dragging || !userImg) return;
+
+      const p = getCanvasPoint(e);
+      const dx = p.x - lastX;
+      const dy = p.y - lastY;
+
+      offsetX += dx;
+      offsetY += dy;
+
+      lastX = p.x;
+      lastY = p.y;
+
+      clampOffsets();
+      render();
+    });
+
+    canvas.addEventListener("pointerup", (e) => {
+      dragging = false;
+      try { canvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    });
+
+    canvas.addEventListener("pointercancel", () => {
+      dragging = false;
+    });
+
+    function isInsideCircle(x, y) {
+      const C = getCircle();
+      const dx = x - C.cx;
+      const dy = y - C.cy;
+      return (dx*dx + dy*dy) <= (C.r * C.r);
+    }
+
+    // =========================
+    // RESET + DOWNLOAD
+    // =========================
+    btnReset.addEventListener("click", () => {
+      if (!userImg) return;
+      setupInitialTransform();
+      render();
+    });
+
+    btnDownload.addEventListener("click", () => {
+      const a = document.createElement("a");
+      a.download = "ECU2026_Banner.png";
+      a.href = canvas.toDataURL("image/png");
+      a.click();
+    });
+
+    // =========================
+    // RENDER
+    // =========================
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (bgLoaded) {
+        ctx.drawImage(bgImg, 0, 0);
+      } else {
+        ctx.save();
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#111827";
+        ctx.font = "28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        ctx.fillText("Banner not loaded", 40, 70);
+        ctx.font = "18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+        ctx.fillText("Please check the path/URL (not file:///).", 40, 105);
+        ctx.restore();
+      }
+
+      if (userImg) {
+        drawCircularImageWithTransform(ctx, userImg);
+        if (BORDER.enabled) drawBorder(ctx);
+      }
+    }
+
+    function drawCircularImageWithTransform(ctx, img) {
+      const C = getCircle();
+      const r = C.r;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(C.cx, C.cy, r, 0, Math.PI * 2);
+      ctx.clip();
+
+      const scale = baseScale * zoom;
+
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      const w = iw * scale;
+      const h = ih * scale;
+
+      const x = (C.cx - w/2) + offsetX;
+      const y = (C.cy - h/2) + offsetY;
+
+      ctx.drawImage(img, x, y, w, h);
+      ctx.restore();
+    }
+
+    function drawBorder(ctx) {
+      const C = getCircle();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(C.cx, C.cy, C.r + BORDER.width/2, 0, Math.PI * 2);
+      ctx.lineWidth = BORDER.width;
+      ctx.strokeStyle = BORDER.color;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // =========================
+    // CLAMPING: prevents empty edges inside the circle
+    // =========================
+    function clampOffsets() {
+      if (!userImg) return;
+
+      const C = getCircle();
+      const r = C.r;
+      const d = r * 2;
+
+      const scale = baseScale * zoom;
+      const w = userImg.naturalWidth * scale;
+      const h = userImg.naturalHeight * scale;
+
+      const maxX = Math.max(0, (w - d) / 2);
+      const maxY = Math.max(0, (h - d) / 2);
+
+      offsetX = clamp(offsetX, -maxX, maxX);
+      offsetY = clamp(offsetY, -maxY, maxY);
+    }
+
+    function clamp(v, min, max) {
+      return Math.min(max, Math.max(min, v));
+    }
+
+    // =========================
+    // HELPERS
+    // =========================
+    function loadImageFromFile(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function getCanvasPoint(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+      };
+    }
+
+    function setStatus(html, state) {
+      statusEl.classList.remove("ok", "err");
+      if (state === true) statusEl.classList.add("ok");
+      if (state === "error") statusEl.classList.add("err");
+      statusEl.innerHTML = html;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+      }[c]));
+    }
+  </script>
+</body>
+</html>
